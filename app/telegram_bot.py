@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 async def start(update: Update, context):
     await update.message.reply_text(
-        "Thank you for following! I am not a lawyer, and the information provided by this chatbot is for informational purposes only. It is not intended to be legal advice and should not be relied upon as such. Immigration laws can be complex and vary by jurisdiction. For personalized guidance and to ensure your rights are protected, please consult a qualified immigration attorney."
+        "Welcome to the Immigration Assistant! Ask me any questions about U.S. immigration laws."
     )
 
 async def help_command(update: Update, context):
@@ -39,82 +39,77 @@ async def handle_message(update: Update, context):
     
     current_gpt4_model_name = GPT4_MODEL_NAME # Using from app.config
 
+    # Initialize prompt components
+    final_prompt_context = f"User Query: {user_query}"
+    system_message_content = "You are an expert U.S. Immigration Law assistant. Answer the user's question comprehensively and clearly based on your general knowledge."
+    rag_context_available = False
+
     try:
-        # 1. Embed user's query and perform vector search
+        # 1. Attempt to get RAG context
         logger.info(f"Performing vector search for query: {user_query}")
         search_results = await query_vector_store(user_query, top_k=10)
 
-        if not search_results:
-            logger.info("Vector search returned no results.")
-            await update.message.reply_text("I couldn't find relevant information for your query. Please try rephrasing.")
-            return
-
-        # Filter results by similarity score
-        min_similarity_threshold = 0.60
-        filtered_by_score_results = [
-            match for match in search_results
-            if hasattr(match, 'score') and match.score >= min_similarity_threshold
-        ]
-
-        if not filtered_by_score_results:
-            logger.info(f"No results met the minimum similarity threshold of {min_similarity_threshold}.")
-            await update.message.reply_text("I couldn't find sufficiently relevant information for your query. Please try rephrasing.")
-            return
-        
-        logger.info(f"Retrieved {len(filtered_by_score_results)} results after applying similarity threshold {min_similarity_threshold}.")
-
-        # 2. De-duplicate search results based on 'original_text'
         unique_results = []
-        seen_original_texts = set()
-        for match in filtered_by_score_results: # Iterate over score-filtered results
-            if hasattr(match, 'metadata') and match.metadata:
-                original_text = match.metadata.get("original_text")
-                if original_text and original_text not in seen_original_texts:
-                    unique_results.append(match)
-                    seen_original_texts.add(original_text)
-                elif not original_text:
-                    logger.warning(f"Match ID {match.id if hasattr(match, 'id') else 'N/A'} missing 'original_text' in metadata (after score filtering), keeping it.")
-                    unique_results.append(match)
+        if search_results:
+            min_similarity_threshold = 0.60
+            filtered_by_score_results = [
+                match for match in search_results
+                if hasattr(match, 'score') and match.score >= min_similarity_threshold
+            ]
+
+            if filtered_by_score_results:
+                logger.info(f"Retrieved {len(filtered_by_score_results)} results after applying similarity threshold {min_similarity_threshold}.")
+                
+                seen_original_texts = set()
+                for match in filtered_by_score_results:
+                    if hasattr(match, 'metadata') and match.metadata:
+                        original_text = match.metadata.get("original_text")
+                        if original_text and original_text not in seen_original_texts:
+                            unique_results.append(match)
+                            seen_original_texts.add(original_text)
+                        elif not original_text:
+                            logger.warning(f"Match ID {match.id if hasattr(match, 'id') else 'N/A'} missing 'original_text' in metadata (after score filtering), keeping it.")
+                            unique_results.append(match) # Or decide to discard
+                    else:
+                        logger.warning(f"Match ID {match.id if hasattr(match, 'id') else 'N/A'} missing metadata (after score filtering), skipping.")
             else:
-                logger.warning(f"Match ID {match.id if hasattr(match, 'id') else 'N/A'} missing metadata (after score filtering), skipping.")
+                logger.info(f"No results met the minimum similarity threshold of {min_similarity_threshold}.")
+        else:
+            logger.info("Vector search returned no initial results.")
 
+        if unique_results:
+            rag_context_available = True
+            logger.info(f"Retrieved {len(unique_results)} unique documents after de-duplication for RAG context.")
+            
+            context_prompt_parts = ["\n\n--- Relevant Information Extracted ---\n"]
+            for i, match in enumerate(unique_results):
+                metadata = match.metadata
+                original_text = metadata.get("original_text", "N/A")
+                doc_context = metadata.get("document_context", "N/A")
+                gpt35_summary = metadata.get("contextualized_summary", "N/A")
 
-        if not unique_results:
-            logger.info("Vector search returned no unique/valid results after de-duplication.")
-            await update.message.reply_text("I couldn't find relevant information for your query. Please try rephrasing.")
-            return
-
-        logger.info(f"Retrieved {len(unique_results)} unique documents after de-duplication.")
-
-        # 3. Construct context for GPT-4
-        context_prompt_parts = [f"User Query: {user_query}\n\n--- Relevant Information Extracted ---\n"]
-
-        for i, match in enumerate(unique_results):
-            metadata = match.metadata
-            original_text = metadata.get("original_text", "N/A")
-            doc_context = metadata.get("document_context", "N/A")
-            gpt35_summary = metadata.get("contextualized_summary", "N/A")
-
-            context_prompt_parts.append(f"\n--- Document {i+1} ---\n")
-            context_prompt_parts.append(f"Original Text Snippet: {original_text}\n")
-            context_prompt_parts.append(f"Overall Document Context: {doc_context}\n")
-            context_prompt_parts.append(f"Contextual Summary (AI-generated for this snippet): {gpt35_summary}\n")
-        
-        final_prompt_context = "".join(context_prompt_parts)
-        logger.debug(f"Constructed prompt context for GPT-4 (first 500 chars): {final_prompt_context[:500]}")
+                context_prompt_parts.append(f"\n--- Document {i+1} ---\n")
+                context_prompt_parts.append(f"Original Text Snippet: {original_text}\n")
+                context_prompt_parts.append(f"Overall Document Context: {doc_context}\n")
+                context_prompt_parts.append(f"Contextual Summary (AI-generated for this snippet): {gpt35_summary}\n")
+            
+            final_prompt_context += "".join(context_prompt_parts)
+            system_message_content = (
+                "You are an expert U.S. Immigration Law assistant. "
+                "Based on the user's query and the provided relevant information snippets, "
+                "answer the user's question comprehensively and clearly. "
+                "If the information seems insufficient to fully answer, state that you can only provide partial information based on the snippets. "
+                "Do not make up information not present in the provided snippets."
+            )
+        else:
+            logger.info("No RAG context available (either no search results, threshold not met, or no unique results). Proceeding with query only.")
 
         # 4. Call GPT-4 for response generation
-        logger.info(f"Sending request to GPT-4 model: {current_gpt4_model_name}")
-        
+        logger.info(f"Sending request to GPT-4 model: {current_gpt4_model_name}. RAG context available: {rag_context_available}")
+        logger.debug(f"System Message: {system_message_content}")
+        logger.debug(f"User Prompt Context (first 300 chars): {final_prompt_context[:300]}")
+
         client = openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
-        
-        system_message_content = (
-            "You are an expert U.S. Immigration Law assistant. "
-            "Based on the user's query and the provided relevant information snippets, "
-            "answer the user's question comprehensively and clearly. "
-            "If the information seems insufficient to fully answer, state that you can only provide partial information based on the snippets. "
-            "Do not make up information not present in the provided snippets."
-        )
         
         gpt_response = await client.chat.completions.create(
             model=current_gpt4_model_name,
