@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 # OPENAI_API_KEY="your_openai_api_key_here" # Added for OpenAI
 # MY_CHAT_ID="your_telegram_chat_id_for_testing" # Optional: for testing send_telegram_message
 
-load_dotenv()
+load_dotenv(override=True)
 
 # Telegram Configuration
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "YOUR_TELEGRAM_BOT_TOKEN_PLACEHOLDER")
