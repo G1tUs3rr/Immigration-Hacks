@@ -19,7 +19,7 @@ async def help_command(update: Update, context):
 async def handle_message(update: Update, context):
     query = update.message.text
     # For now, just echo back the message
-    await update.message.reply_text(f"You asked: {query}\n\nThis is a placeholder response. The actual response generation will be implemented later.")
+    await update.message.reply_text(f"You asked: {query}\n\nhellooo haahaaha ceholder response. The actual response generation will be implemented later.")
 
 async def handle_new_follower(update: Update, context):
     """Handles new members joining the chat."""
