@@ -215,7 +215,7 @@ async def process_document_pipeline(text_content: str, chunk_size_upper: int, ch
 
         if embedding:
             # Create a more robust unique ID
-            doc_hash = hash(doc_context + text_content[:100]) # Simple hash of doc context and start of text
+            doc_hash = hash(doc_context[:10] + text_content[:10]) # Simple hash of doc context and start of text
             chunk_id = f"doc_{doc_hash}_chunk_{i}"
             
             metadata = {

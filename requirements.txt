@@ -9,6 +9,7 @@ requests # For making HTTP requests in the scraping service
 beautifulsoup4 # For HTML parsing
 lxml # HTML parser for BeautifulSoup
 PyPDF2 # For PDF processing
+python-telegram-bot>=20.0 # Official Telegram Bot API library for Python
 
 # Add other specific libraries your project will need, e.g.:
 # python-telegram-bot # A popular library for Telegram bots, if not using httpx directly for all interactions
