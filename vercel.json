@@ -8,7 +8,7 @@
     ],
     "routes": [
         {
-            "src": "/api/telegram_webhook",
+            "src": "/(.*)",
             "dest": "app/main.py"
         }
     ]

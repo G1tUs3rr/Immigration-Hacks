@@ -44,15 +44,4 @@ def handler(request):
     """Vercel serverless function handler."""
     if request.method == "POST":
         return process_telegram_update(request)
-    return {"statusCode": 200, "body": "OK"}
-
-@app.get("/")
-async def root():
-    return {"status": "ok", "message": "Immigration Bot is running"}
-
-if __name__ == "__main__":
-    import uvicorn
-    # This is for local development. For production, use a proper ASGI server like Gunicorn with Uvicorn workers.
-    # The host and port can also be configured via config.py or environment variables.
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-    #test
+    return {"statusCode": 200, "body": "Immigration Bot is running"}
