@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 async def start(update: Update, context):
     await update.message.reply_text(
-        "Welcome to the Immigration Assistant! Ask me any questions about U.S. immigration laws."
+        "Thank you for following! I am not a lawyer, and the information provided by this chatbot is for informational purposes only. It is not intended to be legal advice and should not be relied upon as such. Immigration laws can be complex and vary by jurisdiction. For personalized guidance and to ensure your rights are protected, please consult a qualified immigration attorney."
     )
 
 async def help_command(update: Update, context):
