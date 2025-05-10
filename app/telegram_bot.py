@@ -21,27 +21,21 @@ async def handle_message(update: Update, context):
     # For now, just echo back the message
     await update.message.reply_text(f"You asked: {query}\n\nThis is a placeholder response. The actual response generation will be implemented later.")
 
-async def process_telegram_update(update: Update):
-    if update.message:
-        if update.message.text:
-            if update.message.text.startswith('/start'):
-                await start(update, None)
-            elif update.message.text.startswith('/help'):
-                await help_command(update, None)
-            else:
-                await handle_message(update, None)
+def main():
+    # Create the Application
+    application = Application.builder().token(TELEGRAM_TOKEN).build()
+
+    # Add handlers
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+    # Start the bot
+    print("Starting bot...")
+    application.run_polling()
 
 if __name__ == "__main__":
-    # Example usage (requires TELEGRAM_BOT_TOKEN and a CHAT_ID to be set in config.py or environment)
-    # import asyncio
-    # from ..config import MY_CHAT_ID # Example: define your chat_id in config for testing
-
-    # async def main_test():
-    #     if MY_CHAT_ID and TELEGRAM_BOT_TOKEN:
-    #         response = await send_telegram_message(MY_CHAT_ID, "Hello from the RAG bot script!")
-    #         print(response)
-    #     else:
-    #         print("Please set MY_CHAT_ID and TELEGRAM_BOT_TOKEN in config.py for testing.")
-
-    # asyncio.run(main_test())
-    print("telegram_bot.py can be tested when config.py is set up with TELEGRAM_BOT_TOKEN and a test CHAT_ID.")
+    if not TELEGRAM_TOKEN:
+        print("Error: TELEGRAM_BOT_TOKEN not found in environment variables")
+    else:
+        main()
