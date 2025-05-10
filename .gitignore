@@ -11,6 +11,7 @@ build/
 *.egg
 *.venv/
 venv/
+.env
 env/
 ENV/
 # IDE / Editor specific
