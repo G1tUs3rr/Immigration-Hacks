@@ -73,18 +73,45 @@ application.add_handler(CommandHandler("start", start))
 application.add_handler(CommandHandler("help", help_command))
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-def process_telegram_update(request):
-    """Process incoming Telegram updates."""
-    try:
-        update = Update.de_json(json.loads(request.get_json()), application.bot)
-        application.process_update(update)
-        return {"statusCode": 200, "body": "OK"}
-    except Exception as e:
-        return {"statusCode": 500, "body": str(e)}
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/plain')
+        self.end_headers()
+        self.wfile.write(b"Immigration Bot is running")
+        
+    def do_POST(self):
+        content_length = int(self.headers['Content-Length'])
+        post_data = self.rfile.read(content_length)
+        
+        try:
+            update = Update.de_json(json.loads(post_data), application.bot)
+            application.process_update(update)
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(b"OK")
+        except Exception as e:
+            self.send_response(500)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(str(e).encode())
 
-def handler(request):
-    """Vercel serverless function handler."""
-    if request.method == "POST":
-        return process_telegram_update(request)
-    return {"statusCode": 200, "body": "Immigration Bot is running"}
->>>>>>> main
+if __name__ == "__main__":
+    import asyncio
+    from http.server import HTTPServer
+    
+    # Start the webhook server
+    server = HTTPServer(('0.0.0.0', 8000), Handler)
+    print("Starting webhook server on port 8000...")
+    
+    # Run the server in a separate thread
+    import threading
+    server_thread = threading.Thread(target=server.serve_forever)
+    server_thread.daemon = True
+    server_thread.start()
+    
+    # Run the bot
+    print("Starting bot...")
+    application.run_polling()

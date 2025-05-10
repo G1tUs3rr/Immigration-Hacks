@@ -1,9 +1,6 @@
 import os
-<<<<<<< HEAD
 import logging # Added
 import openai # Added
-=======
->>>>>>> main
 from telegram import Update, ChatMember
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ChatMemberHandler
 from dotenv import load_dotenv
@@ -31,7 +28,6 @@ async def help_command(update: Update, context):
     )
 
 async def handle_message(update: Update, context):
-<<<<<<< HEAD
     user_query = update.message.text
     chat_id = update.effective_chat.id
     logger.info(f"Received query from chat_id {chat_id}: {user_query}")
@@ -142,11 +138,6 @@ async def handle_message(update: Update, context):
     except Exception as e:
         logger.error(f"An unexpected error occurred in handle_message: {e}", exc_info=True)
         await update.message.reply_text("An unexpected error occurred while processing your request. Please try again.")
-=======
-    query = update.message.text
-    # For now, just echo back the message
-    await update.message.reply_text(f"You asked: {query}\n\nhellooo haahaaha ceholder response. The actual response generation will be implemented later.")
->>>>>>> main
 
 async def handle_new_follower(update: Update, context):
     """Handles new members joining the chat."""
