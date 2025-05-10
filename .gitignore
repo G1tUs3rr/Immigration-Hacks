@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+*.venv/
+venv/
+env/
+ENV/
+# IDE / Editor specific
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Data files (if large or sensitive, otherwise decide based on project needs)
+# data/raw_documents/*
+# data/processed_texts/*
+# !data/raw_documents/.gitkeep
+# !data/processed_texts/.gitkeep
+
+# Log files
+*.log
+logs/
+
+# Coverage reports
+.coverage
+coverage.xml
+htmlcov/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Operating System files
+.DS_Store
+Thumbs.db

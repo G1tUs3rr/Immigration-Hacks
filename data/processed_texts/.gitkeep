@@ -1,0 +1,2 @@
+# This file ensures the processed_texts directory is tracked by Git.
+# Store cleaned or chunked text files here, derived from raw_documents, before vectorization.
