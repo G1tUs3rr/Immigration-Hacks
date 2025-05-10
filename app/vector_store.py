@@ -1,6 +1,7 @@
 import logging
 import os
-import openai # Changed import
+import openai
+import pinecone
 from pinecone import Pinecone, ServerlessSpec
 from config import (
     PINECONE_API_KEY,
@@ -79,43 +80,25 @@ def init_pinecone():
         logger.error("Pinecone configuration (API_KEY, ENVIRONMENT, INDEX_NAME) incomplete in config.py.")
         return False
 
-    # Check for OpenAI API key as it's essential for embeddings, which determine dimension.
-    if not openai.api_key:
-        logger.error("OpenAI API key not configured. Pinecone cannot be initialized without knowing embedding dimension from the OpenAI model.")
-        return False
-
     try:
-        pc = Pinecone(api_key=PINECONE_API_KEY)
+        pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENVIRONMENT)
         
         # Check if index exists
-        existing_indexes = pc.list_indexes()
-        if PINECONE_INDEX_NAME not in [index.name for index in existing_indexes]:
+        if PINECONE_INDEX_NAME not in pinecone.list_indexes():
             logger.info(f"Pinecone index '{PINECONE_INDEX_NAME}' does not exist. Attempting to create it.")
             try:
-                pc.create_index(
+                pinecone.create_index(
                     name=PINECONE_INDEX_NAME,
-                    dimension=EMBEDDING_DIMENSION, # Use dimension from config
-                    metric="cosine", # Common metric, can be configured if needed
-                    spec=ServerlessSpec(cloud="aws", region=PINECONE_ENVIRONMENT) # TODO: Make cloud/region configurable?
+                    dimension=EMBEDDING_DIMENSION,
+                    metric="cosine"
                 )
                 logger.info(f"Pinecone index '{PINECONE_INDEX_NAME}' created successfully with dimension {EMBEDDING_DIMENSION}.")
             except Exception as create_e:
                 logger.error(f"Failed to create Pinecone index '{PINECONE_INDEX_NAME}': {create_e}", exc_info=True)
                 return False
         
-        index = pc.Index(PINECONE_INDEX_NAME)
-        # Verify index dimension
-        index_stats = index.describe_index_stats()
-        if index_stats.dimension != EMBEDDING_DIMENSION:
-            logger.error(
-                f"Pinecone index '{PINECONE_INDEX_NAME}' dimension ({index_stats.dimension}) "
-                f"does not match configured EMBEDDING_DIMENSION ({EMBEDDING_DIMENSION}). "
-                "Please delete the index and allow recreation, or update EMBEDDING_DIMENSION."
-            )
-            index = None # Prevent usage of misconfigured index
-            return False
-
-        logger.info(f"Successfully connected to Pinecone index: {PINECONE_INDEX_NAME} (Dimension: {index_stats.dimension})")
+        index = pinecone.Index(PINECONE_INDEX_NAME)
+        logger.info(f"Successfully connected to Pinecone index: {PINECONE_INDEX_NAME}")
         return True
     except Exception as e:
         logger.error(f"Failed to initialize Pinecone: {e}", exc_info=True)
