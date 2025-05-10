@@ -2,7 +2,7 @@ import logging
 import os
 import openai # Changed import
 from pinecone import Pinecone, ServerlessSpec
-from ..config import (
+from config import (
     PINECONE_API_KEY,
     PINECONE_ENVIRONMENT,
     PINECONE_INDEX_NAME,
@@ -43,9 +43,15 @@ async def generate_embedding(text: str, model: str = EMBEDDING_MODEL_NAME): # mo
     input_texts = [item.replace("\n", " ") for item in input_texts]
 
     try:
-        response = await openai.Embedding.acreate(input=input_texts, model=model) # Use acreate for async
+        # Create async client
+        client = openai.AsyncOpenAI(api_key=openai.api_key)
         
-        embeddings = [item['embedding'] for item in response['data']]
+        # Use async client to create embeddings
+        response = await client.embeddings.create(input=input_texts, model=model)
+        
+        # The response object has a 'data' attribute that contains a list of embedding objects
+        # Each embedding object has an 'embedding' attribute
+        embeddings = [item.embedding for item in response.data]
         
         if isinstance(text, str): # If original input was a single string, return a single embedding
             return embeddings[0]
@@ -67,7 +73,7 @@ def init_pinecone():
     global pc, index
     if not all([PINECONE_API_KEY, PINECONE_ENVIRONMENT, PINECONE_INDEX_NAME]):
         if PINECONE_API_KEY == "YOUR_PINECONE_API_KEY_PLACEHOLDER" or \
-           PINECONE_ENVIRONMENT == "YOUR_PINECONE_ENVIRONMENT_PLACEHOLDER":
+        PINECONE_ENVIRONMENT == "YOUR_PINECONE_ENVIRONMENT_PLACEHOLDER":
             logger.warning("Pinecone API Key or Environment is using placeholder values. Pinecone will not be initialized.")
             return False
         logger.error("Pinecone configuration (API_KEY, ENVIRONMENT, INDEX_NAME) incomplete in config.py.")
@@ -79,17 +85,18 @@ def init_pinecone():
         return False
 
     try:
-        pc = Pinecone(api_key=PINECONE_API_KEY, environment=PINECONE_ENVIRONMENT)
+        pc = Pinecone(api_key=PINECONE_API_KEY)
         
         # Check if index exists
-        if PINECONE_INDEX_NAME not in pc.list_indexes().names:
+        existing_indexes = pc.list_indexes()
+        if PINECONE_INDEX_NAME not in [index.name for index in existing_indexes]:
             logger.info(f"Pinecone index '{PINECONE_INDEX_NAME}' does not exist. Attempting to create it.")
             try:
                 pc.create_index(
                     name=PINECONE_INDEX_NAME,
                     dimension=EMBEDDING_DIMENSION, # Use dimension from config
                     metric="cosine", # Common metric, can be configured if needed
-                    spec=ServerlessSpec(cloud="aws", region="us-west-2") # TODO: Make cloud/region configurable?
+                    spec=ServerlessSpec(cloud="aws", region=PINECONE_ENVIRONMENT) # TODO: Make cloud/region configurable?
                 )
                 logger.info(f"Pinecone index '{PINECONE_INDEX_NAME}' created successfully with dimension {EMBEDDING_DIMENSION}.")
             except Exception as create_e:
@@ -131,12 +138,38 @@ async def upsert_vectors(vectors: list, batch_size: int = 100):
     if not vectors:
         logger.warning("No vectors provided to upsert.")
         return None
+
+    def process_vector_id(vector_id: str) -> str:
+        """Process vector ID to ensure it meets Pinecone's requirements."""
+        # First, clean the ID by replacing newlines and multiple spaces with single spaces
+        cleaned_id = ' '.join(vector_id.replace('\n', ' ').split())
+        
+        # If the cleaned ID is already short enough, return it
+        if len(cleaned_id) <= 512:
+            return cleaned_id
+        
+        # If still too long, create a hash of the entire ID
+        import hashlib
+        hash_suffix = hashlib.md5(cleaned_id.encode()).hexdigest()[:8]
+        
+        # Take first 503 characters of cleaned ID and add hash
+        truncated_id = cleaned_id[:503] + "_" + hash_suffix  # 503 + 1 + 8 = 512
+        
+        logger.warning(f"Vector ID was too long ({len(cleaned_id)} chars). Truncated to '{truncated_id}'")
+        return truncated_id
+
     try:
         upsert_responses = []
         for i in range(0, len(vectors), batch_size):
             batch = vectors[i:i + batch_size]
-            logger.debug(f"Upserting batch of {len(batch)} vectors to Pinecone.")
-            response = index.upsert(vectors=batch)
+            # Process each vector in the batch to ensure IDs meet requirements
+            processed_batch = [
+                (process_vector_id(str(id_)), embedding, metadata)
+                for id_, embedding, metadata in batch
+            ]
+            
+            logger.debug(f"Upserting batch of {len(processed_batch)} vectors to Pinecone.")
+            response = index.upsert(vectors=processed_batch)
             upsert_responses.append(response)
             logger.info(f"Successfully upserted batch to Pinecone. Upserted count: {response.upserted_count}")
         return upsert_responses
@@ -307,7 +340,7 @@ if __name__ == "__main__":
         #     print("delete_all operation failed.")
 
     if os.getenv("PINECONE_API_KEY") != "YOUR_PINECONE_API_KEY_PLACEHOLDER" and \
-       os.getenv("PINECONE_ENVIRONMENT") != "YOUR_PINECONE_ENVIRONMENT_PLACEHOLDER":
+    os.getenv("PINECONE_ENVIRONMENT") != "YOUR_PINECONE_ENVIRONMENT_PLACEHOLDER":
         asyncio.run(main_test())
     else:
         print("Skipping vector_store.py direct test because Pinecone credentials are placeholders in .env or environment.")
