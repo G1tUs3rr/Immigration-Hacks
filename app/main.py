@@ -55,3 +55,21 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
             self.wfile.write(str(e).encode())
+
+if __name__ == "__main__":
+    import asyncio
+    from http.server import HTTPServer
+    
+    # Start the webhook server
+    server = HTTPServer(('0.0.0.0', 8000), Handler)
+    print("Starting webhook server on port 8000...")
+    
+    # Run the server in a separate thread
+    import threading
+    server_thread = threading.Thread(target=server.serve_forever)
+    server_thread.daemon = True
+    server_thread.start()
+    
+    # Run the bot
+    print("Starting bot...")
+    application.run_polling()
