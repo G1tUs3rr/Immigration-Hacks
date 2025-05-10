@@ -1,3 +1,5 @@
+whatever
+
 # Python
 __pycache__/
 *.py[cod]
@@ -44,3 +46,4 @@ htmlcov/
 # Operating System files
 .DS_Store
 Thumbs.db
+.vercel

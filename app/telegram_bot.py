@@ -1,55 +1,35 @@
-import httpx
-import logging
+import os
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from dotenv import load_dotenv
 
-# Assuming 'config.py' is in the parent directory of 'app'
-# from ..config import TELEGRAM_BOT_TOKEN # To be defined in config.py
+load_dotenv()
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
-logger = logging.getLogger(__name__)
+async def start(update: Update, context):
+    await update.message.reply_text(
+        "Welcome to the Immigration Assistant! Ask me any questions about U.S. immigration laws."
+    )
 
-# This should be loaded from config.py
-# TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
+async def help_command(update: Update, context):
+    await update.message.reply_text(
+        "I can help you with questions about U.S. immigration laws. Just ask your question!"
+    )
 
-async def send_telegram_message(chat_id: int, text: str):
-    """
-    Sends a message to a specified Telegram chat.
-    """
-    # This is a placeholder. The actual TELEGRAM_BOT_TOKEN needs to be loaded from config.py
-    # For now, we'll simulate or log, as the token isn't available yet.
-    # if not TELEGRAM_BOT_TOKEN:
-    #     logger.error("TELEGRAM_BOT_TOKEN is not configured. Cannot send message.")
-    #     # In a real scenario, you might raise an error or handle this gracefully.
-    #     return {"ok": False, "error": "Bot token not configured"}
+async def handle_message(update: Update, context):
+    query = update.message.text
+    # For now, just echo back the message
+    await update.message.reply_text(f"You asked: {query}\n\nThis is a placeholder response. The actual response generation will be implemented later.")
 
-    # Actual API URL construction should happen once TELEGRAM_BOT_TOKEN is available
-    # current_telegram_api_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}" # Replace with actual token loading
-
-    # Simulate sending message if token is not set for now
-    # This part should be uncommented and adjusted once config.py is set up.
-    # payload = {
-    #     "chat_id": chat_id,
-    #     "text": text,
-    #     "parse_mode": "MarkdownV2"  # Or "HTML", or None
-    # }
-    #
-    # async with httpx.AsyncClient() as client:
-    #     try:
-    #         response = await client.post(f"{current_telegram_api_url}/sendMessage", json=payload)
-    #         response.raise_for_status()  # Raises an exception for 4XX/5XX responses
-    #         logger.info(f"Message sent to chat_id {chat_id}. Response: {response.json()}")
-    #         return response.json()
-    #     except httpx.HTTPStatusError as e:
-    #         logger.error(f"HTTP error sending message to {chat_id}: {e.response.status_code} - {e.response.text}")
-    #         return {"ok": False, "error": f"HTTP error: {e.response.status_code}", "description": e.response.text}
-    #     except httpx.RequestError as e:
-    #         logger.error(f"Request error sending message to {chat_id}: {e}")
-    #         return {"ok": False, "error": "Request error", "description": str(e)}
-    #     except Exception as e:
-    #         logger.error(f"Unexpected error sending message to {chat_id}: {e}", exc_info=True)
-    #         return {"ok": False, "error": "Unexpected error", "description": str(e)}
-
-    # Placeholder logic until config is set up
-    logger.info(f"Simulating sending message to chat_id {chat_id}: '{text}' (TELEGRAM_BOT_TOKEN not yet configured)")
-    return {"ok": True, "simulation": "Message logged, not sent. Configure TELEGRAM_BOT_TOKEN."}
+async def process_telegram_update(update: Update):
+    if update.message:
+        if update.message.text:
+            if update.message.text.startswith('/start'):
+                await start(update, None)
+            elif update.message.text.startswith('/help'):
+                await help_command(update, None)
+            else:
+                await handle_message(update, None)
 
 if __name__ == "__main__":
     # Example usage (requires TELEGRAM_BOT_TOKEN and a CHAT_ID to be set in config.py or environment)
