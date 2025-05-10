@@ -2,13 +2,19 @@ fastapi
 uvicorn[standard] # Includes gunicorn and other standard dependencies for production
 httpx # For making HTTP requests, used in telegram_bot.py and potentially by Pinecone client
 python-dotenv # For loading .env files
-pinecone-client # Official Pinecone client
+pinecone # Official Pinecone client
 openai # For OpenAI API calls, including embeddings
-python-telegram-bot # For Telegram bot functionality
-beautifulsoup4 # For HTML parsing if needed for web scraping
-lxml # Required for BeautifulSoup4's HTML parsing
+# sentence-transformers # For generating embeddings (REMOVED, using OpenAI now)
+requests # For making HTTP requests in the scraping service
+beautifulsoup4 # For HTML parsing
+lxml # HTML parser for BeautifulSoup
+PyPDF2 # For PDF processing
 
-# Development dependencies
-pytest # For testing
-black # For code formatting
-flake8 # For linting
+# Add other specific libraries your project will need, e.g.:
+# python-telegram-bot # A popular library for Telegram bots, if not using httpx directly for all interactions
+# openai # If you plan to use OpenAI models for embeddings or generation (ALREADY ADDED ABOVE)
+
+# For development:
+# pytest # If you add tests later
+# black # For code formatting
+# flake8 # For linting
