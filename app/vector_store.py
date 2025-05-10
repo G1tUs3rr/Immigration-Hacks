@@ -3,7 +3,7 @@ import os
 import openai
 import pinecone
 from pinecone import Pinecone, ServerlessSpec
-from config import (
+from app.config import (
     PINECONE_API_KEY,
     PINECONE_ENVIRONMENT,
     PINECONE_INDEX_NAME,

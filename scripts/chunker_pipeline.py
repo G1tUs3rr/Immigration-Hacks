@@ -18,8 +18,10 @@ import openai
 logger = logging.getLogger(__name__)
 
 # --- Helper Functions ---
-def _estimate_tokens(text: str) -> int:
+def _estimate_tokens(text: str | int) -> int:
     """Estimates token count based on 1 token ~ 4 characters."""
+    if isinstance(text, int):
+        return text // 4
     if not text:
         return 0
     return len(text) // 4
@@ -155,14 +157,15 @@ Based on the document context and the surrounding text (previous, current, and n
         """}
     ]
     try:
-        # Using pre-v1.0 openai library syntax as per existing app.vector_store and plan
-        response = await openai.ChatCompletion.acreate(
+        # Using new OpenAI API format (v1.0.0+)
+        client = openai.AsyncOpenAI(api_key=openai.api_key)
+        response = await client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=prompt_messages,
             temperature=0.3, 
             max_tokens=200  # Increased slightly for potentially richer context
         )
-        contextualization = response.choices[0].message['content'].strip()
+        contextualization = response.choices[0].message.content.strip()
         logger.info(f"Contextualized chunk (first 30 chars): '{current_chunk_text[:30]}...' -> '{contextualization[:50]}...'")
         return contextualization
     except Exception as e:
